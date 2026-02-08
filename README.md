@@ -30,7 +30,8 @@
 建立 `.env` 檔案： 
 ```properties
 OPENROUTER_API_KEY=104
-application.properties : Anon key
+application.properties : supabase.anon.key=your_Anon_key
+supabase.url=your_url
 ```
 
 ### 2. 執行測試
