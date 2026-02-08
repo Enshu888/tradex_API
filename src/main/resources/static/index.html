@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LPI 物流表現分析系統</title>
+
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+    <!-- 頂部藍色進度條 -->
+    <div class="gradient-bg h-2 shadow-lg"></div>
+
+    <div class="max-w-5xl mx-auto px-4 py-12">
+        <!-- 標題 -->
+        <header class="mb-10 text-center">
+            <h1 class="text-4xl font-extrabold text-gray-900 mb-2">
+                LPI 智能物流分析系統
+            </h1>
+            <p class="text-gray-600">
+                基於 AI 語義解析與資料清洗技術的物流數據中台
+            </p>
+        </header>
+
+        <!-- 輸入區塊 -->
+        <div class="bg-white rounded-2xl shadow-xl p-6 mb-8">
+            <div class="flex flex-col md:flex-row gap-4">
+                <input id="questionInput" type="text"
+                    placeholder="輸入問題，例如：『前五名國家』或『區域平均 LPI』"
+                    class="flex-1 px-5 py-4 border-2 border-gray-100 rounded-xl text-lg focus:border-blue-500 shadow-inner">
+                <button id="askBtn"
+                    class="gradient-bg text-white px-8 py-4 rounded-xl font-bold text-lg shadow-lg hover:opacity-90">
+                    開始分析
+                </button>
+            </div>
+
+            <!-- 快捷問題 -->
+            <div class="mt-4 flex gap-3 text-sm text-gray-400">
+                <span>熱門查詢：</span>
+                <button onclick="quickSearch('各區域平均 LPI 分數是多少？')" class="hover:text-blue-500 underline">區域平均</button>
+                <button onclick="quickSearch('顯示物流表現前五名的國家')" class="hover:text-blue-500 underline">前五名排行</button>
+                <button onclick="quickSearch('Which countries in Asia have an LPI score above 3.0?')" class="hover:text-blue-500 underline">亞洲高於 3.0</button>
+            </div>
+        </div>
+
+        <!-- 載入 spinner -->
+        <div id="loading" class="hidden text-center py-10">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+            <p class="mt-4 text-blue-600 font-medium">系統正在清洗資料並計算結果...</p>
+        </div>
+
+        <!-- 結果卡 -->
+<div id="resultCard" class="bg-white rounded-2xl shadow-xl p-8 hidden">
+
+            <div id="summaryContainer" class="hidden mb-10">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                    <span class="w-2 h-6 bg-purple-500 rounded mr-3"></span>各區域平均 LPI 分數分析
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="text-gray-400 border-b border-gray-100">
+                                <th class="pb-3 font-semibold uppercase tracking-wider">區域</th>
+                                <th class="pb-3 font-semibold uppercase tracking-wider text-right">平均分數</th>
+                            </tr>
+                        </thead>
+                        <tbody id="summaryTableBody" class="text-gray-700 divide-y divide-gray-50"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="tableContainer" class="hidden">
+                <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+                    <span class="w-2 h-6 bg-green-500 rounded mr-3"></span>詳細數據清單
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="text-gray-400 border-b border-gray-100">
+                                <th class="pb-4 font-semibold uppercase tracking-wider">排名</th>
+                                <th class="pb-4 font-semibold uppercase tracking-wider">國家</th>
+                                <th class="pb-4 font-semibold uppercase tracking-wider">區域</th>
+                                <th class="pb-4 font-semibold uppercase tracking-wider text-right">LPI 分數</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataTableBody" class="text-gray-700 divide-y divide-gray-50"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // 移除 Chart 相關變數
+    document.getElementById('askBtn').addEventListener('click', askQuestion);
+
+    function quickSearch(text) {
+        document.getElementById('questionInput').value = text;
+        askQuestion();
+    }
+
+    async function askQuestion() {
+        const question = document.getElementById('questionInput').value.trim();
+        if (!question) return;
+
+        document.getElementById('loading').classList.remove('hidden');
+        document.getElementById('resultCard').classList.add('hidden');
+
+        try {
+            const response = await fetch(`/api/ask?question=${encodeURIComponent(question)}`);
+            const data = await response.json();
+            renderResult(data);
+        } catch (err) {
+            alert("後端連線失敗！");
+            console.error(err);
+        } finally {
+            document.getElementById('loading').classList.add('hidden');
+        }
+    }
+
+    function renderResult(data) {
+        const resultCard = document.getElementById('resultCard');
+        const tableContainer = document.getElementById('tableContainer');
+        const summaryContainer = document.getElementById('summaryContainer');
+        const tbody = document.getElementById('dataTableBody');
+        const summaryBody = document.getElementById('summaryTableBody');
+
+        // 初始化畫面
+        resultCard.classList.remove('hidden');
+        tableContainer.classList.add('hidden');
+        summaryContainer.classList.add('hidden');
+
+        // ---- 情況 1：如果是「國家列表」 (Array 型態) ----
+        if (Array.isArray(data)) {
+            tableContainer.classList.remove('hidden');
+            
+            let currentRank = 0;
+            let lastScore = null;
+
+            tbody.innerHTML = data.map((item, index) => {
+                // 並列排名邏輯：如果分數跟上一筆不同，才更新排名數字
+                // 如果分數相同，則維持跟上一筆一樣的排名
+                const score = Number(item.lpi_score);
+                if (score !== lastScore) {
+                    currentRank = index + 1;
+                }
+                lastScore = score;
+
+                return `
+                    <tr class="hover:bg-blue-50 transition">
+                        <td class="py-4 font-mono text-sm text-gray-400">#${currentRank}</td>
+                        <td class="py-4 font-bold">${item.country ?? 'Unknown'}</td>
+                        <td class="py-4">
+                            <span class="px-3 py-1 bg-gray-100 rounded-full text-xs">
+                                ${item.region ?? ''}
+                            </span>
+                        </td>
+                        <td class="py-4 text-right font-mono font-bold text-blue-600">
+                            ${score.toFixed(2)}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            return;
+        }
+
+        // ---- 情況 2：如果是「區域平均」 (Object 型態) ----
+        if (typeof data === 'object' && data !== null) {
+            try {
+                const labels = Object.keys(data);
+                const values = labels.map(key => Number(data[key]));
+
+                if (values.length === 0 || values.every(v => isNaN(v))) {
+                    throw new Error("Not average data");
+                }
+
+                // 直接顯示數字表格，不再初始化 Chart
+                summaryContainer.classList.remove('hidden');
+                summaryBody.innerHTML = labels.map((region, i) => `
+                    <tr class="hover:bg-purple-50 transition">
+                        <td class="py-3 font-medium">${region}</td>
+                        <td class="py-3 text-right font-mono font-bold text-purple-600">
+                            ${values[i].toFixed(2)}
+                        </td>
+                    </tr>
+                `).join('');
+
+            } catch (err) {
+                alert("親愛的客戶您好，目前這個問題無法解析，請輸入與 LPI 相關的查詢，例如：『各區域平均 LPI 分數是多少？』或『前五名國家』。");
+            }
+            return;
+        }
+
+        alert("目前無法處理這個回應，請改用與 LPI 相關的問題。");
+    }
+</script>
+
+</body>
+</html>
