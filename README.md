@@ -12,9 +12,9 @@
 
 | 必要查詢 | 狀態 | 支持中英文
 |---------|------|
-| 1. "Which countries in Asia have an LPI score above 3.0?" | ✅ |
-| 2. "What's the average LPI score by region?" | ✅ |
-| 3. "Show me the top 5 countries by logistics performance" | ✅ |
+1. "Which countries in Asia have an LPI score above 3.0?"  ✅
+2. "What's the average LPI score by region?" ✅ 
+3. "Show me the top 5 countries by logistics performance"  ✅
 
 | 評估重點 | 實現方式 |
 |---------|---------|
