@@ -27,10 +27,10 @@
 ## 🚀 快速開始
 
 ### 1. 設定環境變數
-建立 `.env` 檔案：
-設定 application.properties : Anon key
+建立 `.env` 檔案： 
 ```properties
 OPENROUTER_API_KEY=104
+application.properties : Anon key
 ```
 
 ### 2. 執行測試
