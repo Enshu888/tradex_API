@@ -31,6 +31,7 @@
 ```properties
 OPENROUTER_API_KEY=104
 ```
+設定 `application.properties` ： 
 ```properties
 application.properties :
 supabase.anon.key=your_Anon_key
